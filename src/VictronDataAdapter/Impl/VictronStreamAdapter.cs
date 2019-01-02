@@ -5,22 +5,22 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using VictronDataAdapter.Contracts;
 
-namespace VictronDataAdapter
+namespace VictronDataAdapter.Impl
 {
-    internal class VictronStreamAdapter
+    public class VictronStreamAdapter : IVictronStreamAdapter
     {
-        private readonly TextReader reader;
-        private readonly VictronMessageParser messageParser;
+        private readonly IVictronMessageParser messageParser;
         private readonly ILogger<VictronStreamAdapter> logger;
 
-        public VictronStreamAdapter(VictronMessageParser messageParser, ILogger<VictronStreamAdapter> logger)
+        public VictronStreamAdapter(IVictronMessageParser messageParser, ILogger<VictronStreamAdapter> logger)
         {
             this.messageParser = messageParser;
             this.logger = logger;
         }
 
-        public async Task<VictronDataPoint> GetNextDataPoint(TextReader reader)
+        public async Task<VictronDataPoint> GetNextDataPoint(IDataReader reader)
         {
             var aggregatedMessages = await GetAggregatedMessages(reader);
             this.logger.LogInformation("Got {MessageCount} Messages in Packet", aggregatedMessages.Count);
@@ -91,48 +91,22 @@ namespace VictronDataAdapter
                 return "0";
             }
 
-            return (int.Parse(value) / 1000d).ToString("0.0", CultureInfo.InvariantCulture);
+            return (int.Parse(value) / 1000d).ToString("0.00###", CultureInfo.InvariantCulture);
         }
 
-        private async Task<IList<VictronMessage>> GetAggregatedMessages(TextReader reader)
+        private async Task<IList<VictronMessage>> GetAggregatedMessages(IDataReader reader)
         {
             var lines = new List<string>();
 
-            var line = await reader.ReadLineAsync();
+            var line = await reader.ReadLine();
 
             while (line != null)
             {
                 lines.Add(line);
-                line = await ReadLineWithTimeout(reader, 50);
+                line = await reader.ReadLine(200);
             }
 
-            return lines.Select(x => this.messageParser.ParseLine(x)).ToList();
+            return lines.Select(x => this.messageParser.ParseLine(x)).Where(x => x != null).ToList();
         }
-
-        private async Task<string> ReadLineWithTimeout(TextReader reader, int timeout)
-        {
-            var startTime = DateTime.UtcNow;
-            do
-            {
-                var line = await reader.ReadLineAsync();
-                if (line != null)
-                    return line;
-
-                await Task.Delay(10);
-            } while ((DateTime.UtcNow - startTime).TotalMilliseconds > timeout);
-
-            return null;
-        }
-    }
-
-    public class VictronDataPoint
-    {
-        public IList<AdaptedMessage> Messages { get; set; }
-    }
-
-    public class AdaptedMessage
-    {
-        public string Key { get; set; }
-        public string Value { get; set; }
     }
 }
