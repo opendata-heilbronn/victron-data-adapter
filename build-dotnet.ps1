@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-dotnet build -c Release src/VictronDataAdapter.sln
+dotnet publish -c Release src/VictronDataAdapter/VictronDataAdapter.csproj -o ../../build/

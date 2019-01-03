@@ -7,6 +7,9 @@ using VictronDataAdapter.Impl;
 using System.Threading.Tasks;
 using VictronDataAdapter.Contracts.VictronParser;
 using System;
+using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace VictronDataAdapter
 {
@@ -14,7 +17,7 @@ namespace VictronDataAdapter
     {
         private static void Main(string[] args)
         {
-            Task.Run(() => new HostBuilder()
+            var host = new HostBuilder()
                 .ConfigureLogging(x =>
                 {
                     x.AddConsole();
@@ -22,12 +25,31 @@ namespace VictronDataAdapter
                 .ConfigureServices(ConfigureServices)
                 .ConfigureAppConfiguration((ctx, x) =>
                 {
-                    x.AddJsonFile("appSettings.json");
+                    x.AddJsonFile("appSettings.json", optional: true);
                     x.AddJsonFile($"appSettings.user.{Environment.UserName}.json", optional: true);
                     x.AddEnvironmentVariables();
-                })
-                .RunConsoleAsync())
-                .Wait();
+                }).Build();
+
+            var hasErrors = false;
+            foreach (var error in host.Services.ValidateConfig<IpDataSourceConfig>())
+            {
+                hasErrors = true;
+                Console.WriteLine($"Error in Section IpDataSource: {error}");
+            }
+
+            foreach (var error in host.Services.ValidateConfig<InfluxDbConfiguration>())
+            {
+                hasErrors = true;
+                Console.WriteLine($"Error in Section InfluxDb: {error}");
+            }
+
+            if (hasErrors)
+            {
+                Environment.Exit(1);
+                return;
+            }
+
+            host.Run();
         }
 
         private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)

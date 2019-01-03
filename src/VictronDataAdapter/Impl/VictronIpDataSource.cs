@@ -23,7 +23,7 @@ namespace VictronDataAdapter.Impl
         {
             this.client = new TcpClient();
             this.client.ReceiveTimeout = 100;
-            this.client.Connect(this.config.Hostname, this.config.Port);
+            this.client.Connect(this.config.Hostname, this.config.Port.Value);
 
             return new NetworkDataReader(this.client.GetStream());
         }

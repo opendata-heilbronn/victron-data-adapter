@@ -1,8 +1,12 @@
-﻿namespace VictronDataAdapter.Impl
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace VictronDataAdapter.Impl
 {
     public class IpDataSourceConfig
     {
+        [Required]
         public string Hostname { get; set; }
-        public int Port { get; set; }
+        [Required]
+        public int? Port { get; set; }
     }
 }
