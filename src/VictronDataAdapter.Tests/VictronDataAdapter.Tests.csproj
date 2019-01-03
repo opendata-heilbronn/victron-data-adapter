@@ -16,4 +16,10 @@
     <ProjectReference Include="..\VictronDataAdapter\VictronDataAdapter.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="SerialExample.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

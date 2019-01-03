@@ -4,36 +4,41 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using VictronDataAdapter.Contracts;
 using VictronDataAdapter.Impl;
+using System.Threading.Tasks;
+using VictronDataAdapter.Contracts.VictronParser;
+using System;
 
 namespace VictronDataAdapter
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            new HostBuilder()
+            Task.Run(() => new HostBuilder()
                 .ConfigureLogging(x =>
                 {
                     x.AddConsole();
                 })
                 .ConfigureServices(ConfigureServices)
-                .ConfigureAppConfiguration(x =>
+                .ConfigureAppConfiguration((ctx, x) =>
                 {
                     x.AddJsonFile("appSettings.json");
+                    x.AddJsonFile($"appSettings.user.{Environment.UserName}.json", optional: true);
                     x.AddEnvironmentVariables();
                 })
-                .RunConsoleAsync()
+                .RunConsoleAsync())
                 .Wait();
         }
 
         private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)
         {
-            services.AddSingleton<IVictronMessageParser, VictronMessageParser>();
+            services.AddSingleton<IVictronParser, VictronParser>();
             services.AddSingleton<IVictronStreamAdapter, VictronStreamAdapter>();
 
             services.AddSingleton<IVictronDataSource, VictronIpDataSource>();
             services.Configure<IpDataSourceConfig>(context.Configuration.GetSection("IpDataSource"));
 
+            services.Configure<InfluxDbConfiguration>(context.Configuration.GetSection("InfluxDb"));
             services.AddHostedService<Host>();
         }
     }

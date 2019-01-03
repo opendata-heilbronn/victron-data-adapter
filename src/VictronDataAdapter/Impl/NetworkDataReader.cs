@@ -1,16 +1,15 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using VictronDataAdapter.Contracts;
 
 namespace VictronDataAdapter.Impl
 {
-    class NetworkDataReader : IDataReader
+    internal class NetworkDataReader : IDataReader
     {
         private readonly NetworkStream stream;
-        private string currentLine = "";
 
         public NetworkDataReader(NetworkStream stream)
         {
@@ -22,29 +21,31 @@ namespace VictronDataAdapter.Impl
             this.stream.Dispose();
         }
 
-        public async Task<string> ReadLine(int timeout = Timeout.Infinite)
+        public async Task<bool> WaitForAvailable(int timeout = Timeout.Infinite)
         {
-            byte[] buf = new byte[1024];
             var start = DateTime.UtcNow;
             do
+            {
+                if (this.stream.DataAvailable)
+                    return true;
+                await Task.Delay(100);
+            } while (timeout == Timeout.Infinite || (DateTime.UtcNow - start).TotalMilliseconds < timeout);
+            return false;
+        }
+
+        public async Task<byte[]> ReadAvailable()
+        {
+            byte[] buf = new byte[1024];
+            using (var memoryStream = new MemoryStream())
             {
                 while (this.stream.DataAvailable)
                 {
                     var readBytes = await this.stream.ReadAsync(buf, 0, 1024);
-                    this.currentLine += Encoding.ASCII.GetString(buf, 0, readBytes); // this won't work with multi-byte encodings
+                    memoryStream.Write(buf, 0, readBytes);
                 }
 
-                var endIdx = this.currentLine.IndexOf('\n');
-                if(endIdx != -1)
-                {
-                    var toReturn = this.currentLine.Substring(0, endIdx);
-                    this.currentLine = this.currentLine.Substring(endIdx + 1);
-                    return toReturn;
-                }
-                await Task.Delay(100);
-            } while (timeout == Timeout.Infinite || (DateTime.UtcNow - start).TotalMilliseconds < timeout);
-
-            return null;
+                return memoryStream.ToArray();
+            }
         }
     }
 }

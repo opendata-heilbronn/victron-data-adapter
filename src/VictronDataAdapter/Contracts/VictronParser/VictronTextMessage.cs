@@ -1,6 +1,6 @@
-﻿namespace VictronDataAdapter.Contracts
+﻿namespace VictronDataAdapter.Contracts.VictronParser
 {
-    public class VictronMessage
+    public class VictronTextMessage
     {
         public string Key { get; set; }
         public string Value { get; set; }

@@ -6,6 +6,7 @@ namespace VictronDataAdapter.Contracts
 {
     public interface IDataReader : IDisposable
     {
-        Task<string> ReadLine(int timeout = Timeout.Infinite);
+        Task<bool> WaitForAvailable(int timeout = Timeout.Infinite);
+        Task<byte[]> ReadAvailable();
     }
 }

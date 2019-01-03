@@ -1,75 +1,116 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using InfluxData.Net.InfluxDb.Models;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using VictronDataAdapter.Contracts;
+using VictronDataAdapter.Contracts.VictronParser;
 
 namespace VictronDataAdapter.Impl
 {
     public class VictronStreamAdapter : IVictronStreamAdapter
     {
-        private readonly IVictronMessageParser messageParser;
+        private readonly IVictronParser messageParser;
         private readonly ILogger<VictronStreamAdapter> logger;
+        private readonly VictronParserState parserState;
 
-        public VictronStreamAdapter(IVictronMessageParser messageParser, ILogger<VictronStreamAdapter> logger)
+        public VictronStreamAdapter(IVictronParser messageParser, ILogger<VictronStreamAdapter> logger)
         {
             this.messageParser = messageParser;
             this.logger = logger;
+            this.parserState = new VictronParserState();
         }
 
-        public async Task<VictronDataPoint> GetNextDataPoint(IDataReader reader)
+        public async Task<Point> GetNextDataPoint(IDataReader reader)
         {
-            var aggregatedMessages = await GetAggregatedMessages(reader);
-            this.logger.LogInformation("Got {MessageCount} Messages in Packet", aggregatedMessages.Count);
-
-            var dataPoint = new VictronDataPoint
+            var dataPoint = new Point
             {
-                Messages = new List<AdaptedMessage>()
+                Name = "solar"
             };
-            foreach (var message in aggregatedMessages)
+
+            var messages = await GetMessages(reader);
+
+            var textMessage = (VictronTextBlock)messages.LastOrDefault(x => x.MessageType == VictronMessageType.Text);
+            if (textMessage == null)
+            {
+                this.logger.LogInformation("No Text Message");
+                return null;
+            }
+
+            if (!textMessage.ChecksumValid)
+            {
+                this.logger.LogWarning("Invalid Checksum!");
+                return null;
+            }
+
+            this.logger.LogInformation("Got {MessageCount} Messages in Packet", textMessage.Messages.Count);
+            foreach (var message in textMessage.Messages)
             {
                 this.logger.LogDebug("Got Message with Key {MessageKey} Value {MessageValue}", message.Key, message.Value);
 
-                var mappedMessage = MapMessage(message);
-                if (mappedMessage == null)
-                    continue;
-                dataPoint.Messages.Add(mappedMessage);
+                MapMessage(message, dataPoint);
             }
+            AppendData(dataPoint);
+
             return dataPoint;
         }
 
-        private AdaptedMessage MapMessage(VictronMessage message)
+        private static void AppendData(Point dataPoint)
+        {
+            dataPoint.Fields["ChargeCurrent"] = (double.Parse((string)dataPoint.Fields["BatteryCurrent"], CultureInfo.InvariantCulture) + double.Parse((string)dataPoint.Fields["LoadCurrent"], CultureInfo.InvariantCulture)).ToString("0.00###", CultureInfo.InvariantCulture);
+        }
+
+        private void MapMessage(VictronTextMessage message, Point dataPoint)
         {
             switch (message.Key)
             {
                 case "PID":
-                    return new AdaptedMessage { Key = "ProductId", Value = message.Value };
+                    dataPoint.Tags["ProductId"] = message.Value;
+                    break;
                 case "FW":
-                    return new AdaptedMessage { Key = "FirmwareVersion", Value = message.Value };
+                    dataPoint.Fields["FirmwareVersion"] = message.Value;
+                    break;
                 case "SER#":
-                    return new AdaptedMessage { Key = "SerialNumber", Value = message.Value };
+                    dataPoint.Tags["SerialNumber"] = message.Value;
+                    break;
                 case "V":
-                    return new AdaptedMessage { Key = "BatteryVoltage", Value = FormatMilli(message.Value) };
+                    dataPoint.Fields["BatteryVoltage"] = FormatMilli(message.Value);
+                    break;
                 case "I":
-                    return new AdaptedMessage { Key = "BatteryCurrent", Value = FormatMilli(message.Value) };
+                    dataPoint.Fields["BatteryCurrent"] = FormatMilli(message.Value);
+                    break;
                 case "VPV":
-                    return new AdaptedMessage { Key = "SolarVoltage", Value = FormatMilli(message.Value) };
+                    dataPoint.Fields["SolarVoltage"] = FormatMilli(message.Value);
+                    break;
                 case "PPV":
-                    return new AdaptedMessage { Key = "SolarPower", Value = message.Value };
+                    dataPoint.Fields["SolarPower"] = message.Value;
+                    break;
                 case "CS":
-                    return new AdaptedMessage { Key = "ChargeState", Value = message.Value };
+                    dataPoint.Fields["ChargeState"] = message.Value;
+                    break;
                 case "ERR":
-                    return new AdaptedMessage { Key = "ErrorCode", Value = message.Value };
+                    dataPoint.Fields["ErrorCode"] = message.Value;
+                    break;
                 case "LOAD":
-                    return new AdaptedMessage { Key = "LoadOutputState", Value = FormatOnOff(message.Value) };
+                    dataPoint.Fields["LoadOutputState"] = FormatOnOff(message.Value);
+                    break;
                 case "IL":
-                    return new AdaptedMessage { Key = "LoadCurrent", Value = FormatMilli(message.Value) };
+                    dataPoint.Fields["LoadCurrent"] = FormatMilli(message.Value);
+                    break;
+                case "MPPT":
+                    dataPoint.Fields["MpptState"] = message.Value;
+                    break;
+                case "H19":
+                case "H20":
+                case "H21":
+                case "H22":
+                case "H23":
+                case "HSDS":
+                    break;
                 default:
-                    this.logger.LogDebug("Unsupported Message Key {MessageKey}", message.Key);
-                    return null;
+                    this.logger.LogWarning("Unsupported Message Key {MessageKey}", message.Key);
+                    break;
             }
         }
 
@@ -85,7 +126,7 @@ namespace VictronDataAdapter.Impl
 
         private string FormatMilli(string value)
         {
-            if(!int.TryParse(value, out var parsed))
+            if (!int.TryParse(value, out var parsed))
             {
                 this.logger.LogError("Invalid int value {Value}", parsed);
                 return "0";
@@ -94,19 +135,18 @@ namespace VictronDataAdapter.Impl
             return (int.Parse(value) / 1000d).ToString("0.00###", CultureInfo.InvariantCulture);
         }
 
-        private async Task<IList<VictronMessage>> GetAggregatedMessages(IDataReader reader)
+        private async Task<IList<IVictronMessage>> GetMessages(IDataReader reader)
         {
-            var lines = new List<string>();
-
-            var line = await reader.ReadLine();
-
-            while (line != null)
+            while (true)
             {
-                lines.Add(line);
-                line = await reader.ReadLine(200);
-            }
+                await reader.WaitForAvailable();
+                var data = await reader.ReadAvailable();
+                this.logger.LogInformation("Got {0} bytes", data.Length);
 
-            return lines.Select(x => this.messageParser.ParseLine(x)).Where(x => x != null).ToList();
+                var parsed = this.messageParser.Parse(data, this.parserState);
+                if (parsed.Count > 0)
+                    return parsed;
+            }
         }
     }
 }

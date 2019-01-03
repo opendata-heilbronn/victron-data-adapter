@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
-using System.IO;
 using System.Net.Sockets;
-using System.Text;
 using VictronDataAdapter.Contracts;
 
 namespace VictronDataAdapter.Impl
