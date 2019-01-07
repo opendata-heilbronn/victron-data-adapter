@@ -6,26 +6,26 @@ namespace VictronDataAdapter.Impl
 {
     class VictronIpDataSource : IVictronDataSource
     {
-        private readonly IpDataSourceConfig config;
-        private TcpClient client;
+        private readonly IpDataSourceConfig _config;
+        private TcpClient _client;
 
         public VictronIpDataSource(IOptions<IpDataSourceConfig> config)
         {
-            this.config = config.Value;
+            _config = config.Value;
         }
 
         public void Dispose()
         {
-            this.client?.Dispose();
+            _client?.Dispose();
         }
 
         public IDataReader GetDataReader()
         {
-            this.client = new TcpClient();
-            this.client.ReceiveTimeout = 100;
-            this.client.Connect(this.config.Hostname, this.config.Port.Value);
+            _client = new TcpClient();
+            _client.ReceiveTimeout = 100;
+            _client.Connect(_config.Hostname, _config.Port.Value);
 
-            return new NetworkDataReader(this.client.GetStream());
+            return new NetworkDataReader(_client.GetStream());
         }
     }
 }

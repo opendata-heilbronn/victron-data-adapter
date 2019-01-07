@@ -6,5 +6,3 @@
 	- handle different fields per block
 	- data persistence?
 - robust network code (retry if connection died)
-- Code Cleanup
-- Dockerfile
