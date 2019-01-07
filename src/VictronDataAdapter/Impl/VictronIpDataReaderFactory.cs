@@ -4,12 +4,12 @@ using VictronDataAdapter.Contracts;
 
 namespace VictronDataAdapter.Impl
 {
-    class VictronIpDataSource : IVictronDataSource
+    class VictronIpDataReaderFactory : IVictronDataReaderFactory
     {
         private readonly IpDataSourceConfig config;
         private TcpClient client;
 
-        public VictronIpDataSource(IOptions<IpDataSourceConfig> config)
+        public VictronIpDataReaderFactory(IOptions<IpDataSourceConfig> config)
         {
             this.config = config.Value;
         }
@@ -21,11 +21,7 @@ namespace VictronDataAdapter.Impl
 
         public IDataReader GetDataReader()
         {
-            this.client = new TcpClient();
-            this.client.ReceiveTimeout = 100;
-            this.client.Connect(this.config.Hostname, this.config.Port.Value);
-
-            return new NetworkDataReader(this.client.GetStream());
+            return new NetworkDataReader(this.config);
         }
     }
 }

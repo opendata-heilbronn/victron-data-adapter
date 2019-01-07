@@ -57,7 +57,7 @@ namespace VictronDataAdapter
             services.AddSingleton<IVictronParser, VictronParser>();
             services.AddSingleton<IVictronStreamAdapter, VictronStreamAdapter>();
 
-            services.AddSingleton<IVictronDataSource, VictronIpDataSource>();
+            services.AddSingleton<IVictronDataReaderFactory, VictronIpDataReaderFactory>();
             services.Configure<IpDataSourceConfig>(context.Configuration.GetSection("IpDataSource"));
 
             services.Configure<InfluxDbConfiguration>(context.Configuration.GetSection("InfluxDb"));

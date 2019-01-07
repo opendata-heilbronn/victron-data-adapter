@@ -5,6 +5,6 @@
 - more generic parser:
 	- handle different fields per block
 	- data persistence?
-- robust network code (retry if connection died)
+	- support hex mode?
 - Code Cleanup
 - Dockerfile

@@ -2,7 +2,7 @@
 
 namespace VictronDataAdapter.Contracts
 {
-    interface IVictronDataSource : IDisposable
+    interface IVictronDataReaderFactory : IDisposable
     {
         IDataReader GetDataReader();
     }

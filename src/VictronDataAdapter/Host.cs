@@ -15,14 +15,14 @@ namespace VictronDataAdapter
     internal class Host : IHostedService
     {
         private readonly IVictronStreamAdapter streamAdapter;
-        private readonly IVictronDataSource dataSource;
+        private readonly IVictronDataReaderFactory dataSource;
         private readonly ILogger<Host> logger;
         private readonly InfluxDbConfiguration influxConfig;
         private readonly CancellationTokenSource cts;
         private IDataReader reader;
         private InfluxDbClient writer;
 
-        public Host(IVictronStreamAdapter streamAdapter, IVictronDataSource dataSource, ILogger<Host> logger, IOptions<InfluxDbConfiguration> influxConfig)
+        public Host(IVictronStreamAdapter streamAdapter, IVictronDataReaderFactory dataSource, ILogger<Host> logger, IOptions<InfluxDbConfiguration> influxConfig)
         {
             this.streamAdapter = streamAdapter;
             this.dataSource = dataSource;
