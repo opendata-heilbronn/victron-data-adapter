@@ -7,12 +7,12 @@ namespace VictronDataAdapter.Tests
 {
     class MockDataReader : IDataReader
     {
-        private readonly MemoryStream data;
+        private readonly MemoryStream _data;
 
         public MockDataReader(byte[] data)
         {
-            this.data = new MemoryStream(data);
-            this.data.Position = 0;
+            _data = new MemoryStream(data);
+            _data.Position = 0;
         }
 
         public void Dispose()
@@ -21,13 +21,13 @@ namespace VictronDataAdapter.Tests
 
         public Task<bool> WaitForAvailable(int timeout = -1)
         {
-            return Task.FromResult(this.data.Position == this.data.Length);
+            return Task.FromResult(_data.Position == _data.Length);
         }
 
         public Task<byte[]> ReadAvailable()
         {
             var buffer = new byte[5];
-            var length = this.data.Read(buffer, 0, 5);
+            var length = _data.Read(buffer, 0, 5);
 
             var toReturn = new byte[length];
             Array.Copy(buffer, toReturn, length);

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using VictronDataAdapter.Contracts.VictronParser;
@@ -7,12 +7,12 @@ namespace VictronDataAdapter.Impl
 {
     public class VictronParser : IVictronParser
     {
-        private readonly ILogger<VictronParser> logger;
-        private const string checksumTagName = "Checksum";
+        private readonly ILogger<VictronParser> _logger;
+        private const string ChecksumTagName = "Checksum";
 
         public VictronParser(ILogger<VictronParser> logger)
         {
-            this.logger = logger;
+            _logger = logger;
         }
 
         public IList<IVictronMessage> Parse(byte[] bytes, VictronParserState state)
@@ -65,7 +65,7 @@ namespace VictronDataAdapter.Impl
                     {
                         case (byte)'\t':
                             // the Checksum record indicates a EOR
-                            if (state.RecordName == checksumTagName)
+                            if (state.RecordName == ChecksumTagName)
                             {
                                 state.ParseState = ParseState.Checksum;
                                 break;
@@ -100,7 +100,7 @@ namespace VictronDataAdapter.Impl
                     {
                         bool valid = state.Checksum == 0;
                         if (!valid)
-                            this.logger.LogError($"Invalid frame checksum 0x{state.Checksum:X2}");
+                            this._logger.LogError($"Invalid frame checksum 0x{state.Checksum:X2}");
                         state.Checksum = 0;
                         state.ParseState = ParseState.Idle;
                         var records = state.Records;

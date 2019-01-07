@@ -1,8 +1,6 @@
-﻿using System;
-
-namespace VictronDataAdapter.Contracts
+﻿namespace VictronDataAdapter.Contracts
 {
-    interface IVictronDataReaderFactory : IDisposable
+    interface IVictronDataReaderFactory
     {
         IDataReader GetDataReader();
     }

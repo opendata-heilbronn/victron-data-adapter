@@ -4,12 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using VictronDataAdapter.Contracts;
 using VictronDataAdapter.Impl;
-using System.Threading.Tasks;
 using VictronDataAdapter.Contracts.VictronParser;
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace VictronDataAdapter
 {

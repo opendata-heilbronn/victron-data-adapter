@@ -11,15 +11,15 @@ namespace VictronDataAdapter.Impl
 {
     public class VictronStreamAdapter : IVictronStreamAdapter
     {
-        private readonly IVictronParser messageParser;
-        private readonly ILogger<VictronStreamAdapter> logger;
-        private readonly VictronParserState parserState;
+        private readonly IVictronParser _messageParser;
+        private readonly ILogger<VictronStreamAdapter> _logger;
+        private readonly VictronParserState _parserState;
 
         public VictronStreamAdapter(IVictronParser messageParser, ILogger<VictronStreamAdapter> logger)
         {
-            this.messageParser = messageParser;
-            this.logger = logger;
-            this.parserState = new VictronParserState();
+            _messageParser = messageParser;
+            _logger = logger;
+            _parserState = new VictronParserState();
         }
 
         public async Task<Point> GetNextDataPoint(IDataReader reader)
@@ -34,20 +34,20 @@ namespace VictronDataAdapter.Impl
             var textMessage = (VictronTextBlock)messages.LastOrDefault(x => x.MessageType == VictronMessageType.Text);
             if (textMessage == null)
             {
-                this.logger.LogInformation("No Text Message");
+                _logger.LogInformation("No Text Message");
                 return null;
             }
 
             if (!textMessage.ChecksumValid)
             {
-                this.logger.LogWarning("Invalid Checksum!");
+                _logger.LogWarning("Invalid Checksum!");
                 return null;
             }
 
-            this.logger.LogInformation("Got {MessageCount} Messages in Packet", textMessage.Messages.Count);
+            _logger.LogInformation("Got {MessageCount} Messages in Packet", textMessage.Messages.Count);
             foreach (var message in textMessage.Messages)
             {
-                this.logger.LogDebug("Got Message with Key {MessageKey} Value {MessageValue}", message.Key, message.Value);
+                _logger.LogDebug("Got Message with Key {MessageKey} Value {MessageValue}", message.Key, message.Value);
 
                 MapMessage(message, dataPoint);
             }
@@ -109,27 +109,31 @@ namespace VictronDataAdapter.Impl
                 case "HSDS":
                     break;
                 default:
-                    this.logger.LogWarning("Unsupported Message Key {MessageKey}", message.Key);
+                    _logger.LogWarning("Unsupported Message Key {MessageKey}", message.Key);
                     break;
             }
         }
 
         private string FormatOnOff(string value)
         {
-            if (value == "ON")
-                return "1";
-            if (value == "OFF")
-                return "0";
-            this.logger.LogError("Invalid OnOff Value {Value}", value);
-            return "-1";
+            switch (value)
+            {
+                case "ON":
+                    return "1";
+                case "OFF":
+                    return "0";
+                default:
+                    _logger.LogError("Invalid OnOff Value {Value}", value);
+                    return "-1";
+            }
         }
 
         private string FormatMilli(string value)
         {
             if (!int.TryParse(value, out var parsed))
             {
-                this.logger.LogError("Invalid int value {Value}", parsed);
-                return "0";
+                _logger.LogError("Invalid int value {Value}", parsed);
+                return "0.00";
             }
 
             return (int.Parse(value) / 1000d).ToString("0.00###", CultureInfo.InvariantCulture);
@@ -141,9 +145,9 @@ namespace VictronDataAdapter.Impl
             {
                 await reader.WaitForAvailable();
                 var data = await reader.ReadAvailable();
-                this.logger.LogInformation("Got {0} bytes", data.Length);
+                _logger.LogInformation("Got {0} bytes", data.Length);
 
-                var parsed = this.messageParser.Parse(data, this.parserState);
+                var parsed = _messageParser.Parse(data, _parserState);
                 if (parsed.Count > 0)
                     return parsed;
             }

@@ -14,27 +14,27 @@ namespace VictronDataAdapter
 {
     internal class Host : IHostedService
     {
-        private readonly IVictronStreamAdapter streamAdapter;
-        private readonly IVictronDataReaderFactory dataSource;
-        private readonly ILogger<Host> logger;
-        private readonly InfluxDbConfiguration influxConfig;
-        private readonly CancellationTokenSource cts;
-        private IDataReader reader;
-        private InfluxDbClient writer;
+        private readonly IVictronStreamAdapter _streamAdapter;
+        private readonly IVictronDataReaderFactory _dataSource;
+        private readonly ILogger<Host> _logger;
+        private readonly InfluxDbConfiguration _influxConfig;
+        private readonly CancellationTokenSource _cts;
+        private IDataReader _reader;
+        private InfluxDbClient _writer;
 
         public Host(IVictronStreamAdapter streamAdapter, IVictronDataReaderFactory dataSource, ILogger<Host> logger, IOptions<InfluxDbConfiguration> influxConfig)
         {
-            this.streamAdapter = streamAdapter;
-            this.dataSource = dataSource;
-            this.logger = logger;
-            this.influxConfig = influxConfig.Value;
-            this.cts = new CancellationTokenSource();
+            _streamAdapter = streamAdapter;
+            _dataSource = dataSource;
+            _logger = logger;
+            _influxConfig = influxConfig.Value;
+            _cts = new CancellationTokenSource();
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            this.reader = this.dataSource.GetDataReader();
-            this.writer = new InfluxDbClient(this.influxConfig.Endpoint, this.influxConfig.Username, this.influxConfig.Password, InfluxDbVersion.Latest);
+            _reader = _dataSource.GetDataReader();
+            _writer = new InfluxDbClient(_influxConfig.Endpoint, _influxConfig.Username, _influxConfig.Password, InfluxDbVersion.Latest);
 
             Task.Run(() => Run());
 
@@ -43,38 +43,38 @@ namespace VictronDataAdapter
 
         public async Task Run()
         {
-            while (!this.cts.IsCancellationRequested)
+            while (!_cts.IsCancellationRequested)
             {
                 Point point = null;
 
                 try
                 {
-                    point = await this.streamAdapter.GetNextDataPoint(this.reader);
+                    point = await _streamAdapter.GetNextDataPoint(_reader);
                 }
                 catch (Exception ex)
                 {
-                    this.logger.LogError(ex, "Error while getting data point!");
+                    _logger.LogError(ex, "Error while getting data point!");
                 }
 
                 try
                 {
                     if (point != null)
                     {
-                        point.Name = this.influxConfig.Measurement;
-                        await this.writer.Client.WriteAsync(point, this.influxConfig.Database);
+                        point.Name = _influxConfig.Measurement;
+                        await _writer.Client.WriteAsync(point, _influxConfig.Database);
                     }
                 }
                 catch (Exception ex)
                 {
-                    this.logger.LogError(ex, "Error while sending data point!");
+                    _logger.LogError(ex, "Error while sending data point!");
                 }
             }
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            this.reader?.Dispose();
-            this.dataSource?.Dispose();
+            _reader?.Dispose();
+            _dataSource?.Dispose();
             return Task.CompletedTask;
         }
     }

@@ -10,31 +10,31 @@ namespace VictronDataAdapter.Impl
 {
     internal class NetworkDataReader : IDataReader
     {
-        private TcpClient tcpClient;
-        private NetworkStream stream;
-        private readonly IpDataSourceConfig config;
+        private TcpClient _tcpClient;
+        private NetworkStream _stream;
+        private readonly IpDataSourceConfig _config;
 
         public NetworkDataReader(IpDataSourceConfig config)
         {
-            this.config = config;
-            this.tcpClient = new TcpClient();
+            _config = config;
+            _tcpClient = new TcpClient();
         }
 
         private async Task Connect()
         {
-            this.stream?.Dispose();
-            this.tcpClient?.Dispose();
+            _stream?.Dispose();
+            _tcpClient?.Dispose();
 
-            this.tcpClient = new TcpClient();
-            this.tcpClient.SendTimeout = 1000;
+            _tcpClient = new TcpClient();
+            _tcpClient.SendTimeout = 1000;
 
-            await this.tcpClient.ConnectAsync(this.config.Hostname, this.config.Port.Value);
-            this.stream = this.tcpClient.GetStream();
+            await _tcpClient.ConnectAsync(_config.Hostname, _config.Port.Value);
+            _stream = _tcpClient.GetStream();
         }
 
         public void Dispose()
         {
-            this.stream.Dispose();
+            _stream.Dispose();
         }
 
         public async Task<bool> WaitForAvailable(int timeout = Timeout.Infinite)
@@ -45,12 +45,12 @@ namespace VictronDataAdapter.Impl
             var start = DateTime.UtcNow;
             do
             {
-                if (!this.tcpClient.Connected)
+                if (!_tcpClient.Connected)
                 {
                     await Connect();
                 }
 
-                if (this.stream.DataAvailable)
+                if (_stream.DataAvailable)
                     return true;
                 await Task.Delay(loopDelay);
 
@@ -59,7 +59,7 @@ namespace VictronDataAdapter.Impl
                 if ((i * loopDelay) % (1000 * 60) == 0) // if no response in 10 seconds, send bogus data to check if connection still alive
                 {
                     var cmd = ":352\n"; // get firmware version cmd as to not confuse the charge controller if rx is connected
-                    await this.stream.WriteAsync(Encoding.ASCII.GetBytes(cmd));
+                    await _stream.WriteAsync(Encoding.ASCII.GetBytes(cmd));
                 }
             } while (timeout == Timeout.Infinite || (DateTime.UtcNow - start).TotalMilliseconds < timeout);
             return false;
@@ -67,7 +67,7 @@ namespace VictronDataAdapter.Impl
 
         public async Task<byte[]> ReadAvailable()
         {
-            if (!this.tcpClient.Connected)
+            if (!_tcpClient.Connected)
             {
                 await Connect();
             }
@@ -75,9 +75,9 @@ namespace VictronDataAdapter.Impl
             byte[] buf = new byte[1024];
             using (var memoryStream = new MemoryStream())
             {
-                while (this.stream.DataAvailable)
+                while (_stream.DataAvailable)
                 {
-                    var readBytes = await this.stream.ReadAsync(buf, 0, 1024);
+                    var readBytes = await _stream.ReadAsync(buf, 0, 1024);
                     memoryStream.Write(buf, 0, readBytes);
                 }
 
