@@ -74,7 +74,6 @@ namespace VictronDataAdapter
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _reader?.Dispose();
-            _dataSource?.Dispose();
             return Task.CompletedTask;
         }
     }
