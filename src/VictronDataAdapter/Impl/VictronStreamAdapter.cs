@@ -1,5 +1,6 @@
 ﻿using InfluxData.Net.InfluxDb.Models;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -49,7 +50,14 @@ namespace VictronDataAdapter.Impl
             {
                 _logger.LogDebug("Got Message with Key {MessageKey} Value {MessageValue}", message.Key, message.Value);
 
-                MapMessage(message, dataPoint);
+                try
+                {
+                    MapMessage(message, dataPoint);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to map message with key {MessageKey}", message.Key);
+                }
             }
             AppendData(dataPoint);
 
@@ -58,7 +66,7 @@ namespace VictronDataAdapter.Impl
 
         private static void AppendData(Point dataPoint)
         {
-            dataPoint.Fields["ChargeCurrent"] = (double.Parse((string)dataPoint.Fields["BatteryCurrent"], CultureInfo.InvariantCulture) + double.Parse((string)dataPoint.Fields["LoadCurrent"], CultureInfo.InvariantCulture)).ToString("0.00###", CultureInfo.InvariantCulture);
+            dataPoint.Fields["ChargeCurrent"] = (double)dataPoint.Fields["BatteryCurrent"] + (double)dataPoint.Fields["LoadCurrent"];
         }
 
         private void MapMessage(VictronTextMessage message, Point dataPoint)
@@ -75,31 +83,31 @@ namespace VictronDataAdapter.Impl
                     dataPoint.Tags["SerialNumber"] = message.Value;
                     break;
                 case "V":
-                    dataPoint.Fields["BatteryVoltage"] = FormatMilli(message.Value);
+                    dataPoint.Fields["BatteryVoltage"] = ParseMilli(message.Value);
                     break;
                 case "I":
-                    dataPoint.Fields["BatteryCurrent"] = FormatMilli(message.Value);
+                    dataPoint.Fields["BatteryCurrent"] = ParseMilli(message.Value);
                     break;
                 case "VPV":
-                    dataPoint.Fields["SolarVoltage"] = FormatMilli(message.Value);
+                    dataPoint.Fields["SolarVoltage"] = ParseMilli(message.Value);
                     break;
                 case "PPV":
-                    dataPoint.Fields["SolarPower"] = message.Value;
+                    dataPoint.Fields["SolarPower"] = ParseInt(message.Value);
                     break;
                 case "CS":
-                    dataPoint.Fields["ChargeState"] = message.Value;
+                    dataPoint.Fields["ChargeState"] = ParseInt(message.Value);
                     break;
                 case "ERR":
-                    dataPoint.Fields["ErrorCode"] = message.Value;
+                    dataPoint.Fields["ErrorCode"] = ParseInt(message.Value);
                     break;
                 case "LOAD":
                     dataPoint.Fields["LoadOutputState"] = FormatOnOff(message.Value);
                     break;
                 case "IL":
-                    dataPoint.Fields["LoadCurrent"] = FormatMilli(message.Value);
+                    dataPoint.Fields["LoadCurrent"] = ParseMilli(message.Value);
                     break;
                 case "MPPT":
-                    dataPoint.Fields["MpptState"] = message.Value;
+                    dataPoint.Fields["MpptState"] = ParseInt(message.Value);
                     break;
                 case "H19":
                 case "H20":
@@ -128,15 +136,24 @@ namespace VictronDataAdapter.Impl
             }
         }
 
-        private string FormatMilli(string value)
+        private double ParseMilli(string value)
         {
             if (!int.TryParse(value, out var parsed))
             {
-                _logger.LogError("Invalid int value {Value}", parsed);
-                return "0.00";
+                throw new FormatException($"Invalid int value {value}");
             }
 
-            return (int.Parse(value) / 1000d).ToString("0.00###", CultureInfo.InvariantCulture);
+            return parsed / 1000d;
+        }
+
+        private int ParseInt(string value)
+        {
+            if (!int.TryParse(value, out var parsed))
+            {
+                throw new FormatException($"Invalid int value {value}");
+            }
+
+            return parsed;
         }
 
         private async Task<IList<IVictronMessage>> GetMessages(IDataReader reader)
