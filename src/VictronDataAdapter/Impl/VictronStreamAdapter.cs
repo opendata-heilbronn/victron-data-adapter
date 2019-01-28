@@ -59,14 +59,15 @@ namespace VictronDataAdapter.Impl
                     _logger.LogWarning(ex, "Failed to map message with key {MessageKey}", message.Key);
                 }
             }
-            AppendData(dataPoint);
+            AppendAdditionalData(dataPoint);
 
             return dataPoint;
         }
 
-        private static void AppendData(Point dataPoint)
+        private static void AppendAdditionalData(Point dataPoint)
         {
             dataPoint.Fields["ChargeCurrent"] = (double)dataPoint.Fields["BatteryCurrent"] + (double)dataPoint.Fields["LoadCurrent"];
+            dataPoint.Fields["LoadPower"] = (double)dataPoint.Fields["BatteryVoltage"] * (double)dataPoint.Fields["LoadCurrent"];
         }
 
         private void MapMessage(VictronTextMessage message, Point dataPoint)
