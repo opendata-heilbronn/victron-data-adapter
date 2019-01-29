@@ -111,6 +111,8 @@ namespace VictronDataAdapter.Impl
                     dataPoint.Fields["MpptState"] = ParseInt(message.Value);
                     break;
                 case "H19":
+                    dataPoint.Fields["YieldTotal"] = ParseInt(message.Value) / 100.0;
+                    break;
                 case "H20":
                 case "H21":
                 case "H22":
