@@ -84,6 +84,7 @@ namespace VictronDataAdapter
                     if (_sendQueue.Count <= 1000)
                     {
                         _sendQueue.Enqueue(point);
+                        _logger.LogInformation("Retrying...");
                     }
                 }
             }
