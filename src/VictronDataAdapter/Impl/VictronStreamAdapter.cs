@@ -31,6 +31,7 @@ namespace VictronDataAdapter.Impl
             };
 
             var messages = await GetMessages(reader);
+            dataPoint.Timestamp = DateTime.UtcNow;
 
             var textMessage = (VictronTextBlock)messages.LastOrDefault(x => x.MessageType == VictronMessageType.Text);
             if (textMessage == null)

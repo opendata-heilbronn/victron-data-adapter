@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using VictronDataAdapter.Contracts;
@@ -21,6 +22,7 @@ namespace VictronDataAdapter
         private readonly CancellationTokenSource _cts;
         private IDataReader _reader;
         private InfluxDbClient _writer;
+        private ConcurrentQueue<Point> _sendQueue;
 
         public Host(IVictronStreamAdapter streamAdapter, IVictronDataReaderFactory dataSource, ILogger<Host> logger, IOptions<InfluxDbConfiguration> influxConfig)
         {
@@ -28,6 +30,7 @@ namespace VictronDataAdapter
             _dataSource = dataSource;
             _logger = logger;
             _influxConfig = influxConfig.Value;
+            _sendQueue = new ConcurrentQueue<Point>();
             _cts = new CancellationTokenSource();
         }
 
@@ -36,37 +39,52 @@ namespace VictronDataAdapter
             _reader = _dataSource.GetDataReader();
             _writer = new InfluxDbClient(_influxConfig.Endpoint, _influxConfig.Username, _influxConfig.Password, InfluxDbVersion.Latest);
 
-            Task.Run(() => Run());
+            Task.Run(() => CollectData());
+            Task.Run(() => SendData());
 
             return Task.CompletedTask;
         }
 
-        public async Task Run()
+        public async Task CollectData()
         {
             while (!_cts.IsCancellationRequested)
             {
-                Point point = null;
-
                 try
                 {
-                    point = await _streamAdapter.GetNextDataPoint(_reader);
+                    var point = await _streamAdapter.GetNextDataPoint(_reader);
+                    if (point != null)
+                    {
+                        _sendQueue.Enqueue(point);
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error while getting data point!");
                 }
+            }
+        }
+        public async Task SendData()
+        {
+            while (!_cts.IsCancellationRequested)
+            {
+                if (!_sendQueue.TryDequeue(out var point))
+                {
+                    await Task.Delay(500);
+                    continue;
+                }
 
                 try
                 {
-                    if (point != null)
-                    {
-                        point.Name = _influxConfig.Measurement;
-                        await _writer.Client.WriteAsync(point, _influxConfig.Database);
-                    }
+                    point.Name = _influxConfig.Measurement;
+                    await _writer.Client.WriteAsync(point, _influxConfig.Database);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error while sending data point!");
+                    if (_sendQueue.Count <= 1000)
+                    {
+                        _sendQueue.Enqueue(point);
+                    }
                 }
             }
         }
