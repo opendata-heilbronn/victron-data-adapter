@@ -2,10 +2,8 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using VictronDataAdapter.Contracts;
-using VictronDataAdapter.Impl;
-using VictronDataAdapter.Contracts.VictronParser;
 using System;
+using VeDirectCommunication;
 
 namespace VictronDataAdapter
 {
@@ -50,12 +48,11 @@ namespace VictronDataAdapter
 
         private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)
         {
-            services.AddSingleton<IVictronParser, VictronParser>();
             services.AddSingleton<IVictronStreamAdapter, VictronStreamAdapter>();
-
-            services.AddSingleton<IVictronDataReaderFactory, VictronIpDataReaderFactory>();
+            
             services.Configure<IpDataSourceConfig>(context.Configuration.GetSection("IpDataSource"));
-
+            services.UseVeDirectCommunication<NetworkVictronStream>();
+            
             services.Configure<InfluxDbConfiguration>(context.Configuration.GetSection("InfluxDb"));
             services.AddHostedService<Host>();
         }

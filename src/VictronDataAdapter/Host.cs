@@ -1,5 +1,4 @@
-﻿using InfluxData.Net.Common.Enums;
-using InfluxData.Net.InfluxDb;
+﻿using InfluxData.Net.InfluxDb;
 using InfluxData.Net.InfluxDb.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -8,75 +7,90 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using VictronDataAdapter.Contracts;
-using VictronDataAdapter.Impl;
+using VeDirectCommunication;
 
 namespace VictronDataAdapter
 {
     internal class Host : IHostedService
     {
         private readonly IVictronStreamAdapter _streamAdapter;
-        private readonly IVictronDataReaderFactory _dataSource;
+        private readonly IVeDirectDevice _device;
+        private readonly IOptions<IpDataSourceConfig> _dataSourceConfig;
         private readonly ILogger<Host> _logger;
         private readonly InfluxDbConfiguration _influxConfig;
         private readonly CancellationTokenSource _cts;
-        private IDataReader _reader;
+        private IVictronStream _reader;
         private InfluxDbClient _writer;
         private ConcurrentQueue<Point> _sendQueue;
 
-        public Host(IVictronStreamAdapter streamAdapter, IVictronDataReaderFactory dataSource, ILogger<Host> logger, IOptions<InfluxDbConfiguration> influxConfig)
+        public Host(IVictronStreamAdapter streamAdapter, IVeDirectDevice device, IOptions<IpDataSourceConfig> dataSourceConfig, ILogger<Host> logger, IOptions<InfluxDbConfiguration> influxConfig)
         {
             _streamAdapter = streamAdapter;
-            _dataSource = dataSource;
+            _device = device;
+            _dataSourceConfig = dataSourceConfig;
             _logger = logger;
             _influxConfig = influxConfig.Value;
             _sendQueue = new ConcurrentQueue<Point>();
             _cts = new CancellationTokenSource();
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _reader = _dataSource.GetDataReader();
-            _writer = new InfluxDbClient(_influxConfig.Endpoint, _influxConfig.Username, _influxConfig.Password, InfluxDbVersion.Latest);
+            await _device.Start();
+            _device.TextMessageReceived += TextMessageReceived;
+            _device.AsyncMessageReceived += (sender, e) => _logger.LogInformation($"{e.Data.Register}: {e.Data.RegisterValue}");
 
-            Task.Run(() => CollectData());
+            var version = await _device.Ping();
+            //_writer = new InfluxDbClient(_influxConfig.Endpoint, _influxConfig.Username, _influxConfig.Password, InfluxDbVersion.Latest);
+
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            Task.Run(() => Ping());
             Task.Run(() => SendData());
-
-            return Task.CompletedTask;
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 
-        public async Task CollectData()
+        private void TextMessageReceived(object sender, TextMessageReceivedEventArgs args)
+        {
+            _logger.LogInformation("Got {MessageCount} Messages in Packet", args.Data.Fields.Count);
+            var point = _streamAdapter.GetNextDataPoint(args.Data);
+            if (point != null)
+            {
+                _sendQueue.Enqueue(point);
+            }
+        }
+
+        public async Task Ping()
         {
             while (!_cts.IsCancellationRequested)
             {
                 try
                 {
-                    var point = await _streamAdapter.GetNextDataPoint(_reader);
-                    if (point != null)
-                    {
-                        _sendQueue.Enqueue(point);
-                    }
+                    await _device.Ping();
+                    await Task.Delay(30 * 1000, _cts.Token); //every 30 seconds
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error while getting data point!");
+                    _logger.LogError(ex, "Error while pinging!");
                 }
             }
         }
+
         public async Task SendData()
         {
             while (!_cts.IsCancellationRequested)
             {
                 if (!_sendQueue.TryDequeue(out var point))
                 {
-                    await Task.Delay(500);
+                    await Task.Delay(500, _cts.Token);
                     continue;
                 }
 
                 try
                 {
                     point.Name = _influxConfig.Measurement;
-                    await _writer.Client.WriteAsync(point, _influxConfig.Database);
+
+                    //TODO: disabled for debugging
+                    //await _writer.Client.WriteAsync(point, _influxConfig.Database);
                 }
                 catch (Exception ex)
                 {
@@ -92,6 +106,7 @@ namespace VictronDataAdapter
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
+            _device.Stop();
             _reader?.Dispose();
             return Task.CompletedTask;
         }

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using VictronDataAdapter.Contracts;
+using VeDirectCommunication;
 
 namespace VictronDataAdapter.Tests
 {
-    class MockDataReader : IDataReader
+    class MockDataReader : IVictronStream
     {
         private readonly MemoryStream _data;
 
@@ -19,11 +19,6 @@ namespace VictronDataAdapter.Tests
         {
         }
 
-        public Task<bool> WaitForAvailable(int timeout = -1)
-        {
-            return Task.FromResult(_data.Position == _data.Length);
-        }
-
         public Task<byte[]> ReadAvailable()
         {
             var buffer = new byte[5];
@@ -33,6 +28,16 @@ namespace VictronDataAdapter.Tests
             Array.Copy(buffer, toReturn, length);
 
             return Task.FromResult(toReturn);
+        }
+
+        public Task Write(byte[] bytes)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> DataAvailable()
+        {
+            return Task.FromResult(_data.Position != _data.Length);
         }
     }
 }
