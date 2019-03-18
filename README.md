@@ -5,3 +5,5 @@
 - support hex mode
 	- add SetRegister support
 	- switch from TextMessage to GetRegister/Async
+- write helpful readme
+- maybe put library part in seperate repo
