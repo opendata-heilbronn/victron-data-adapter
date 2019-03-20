@@ -1,20 +1,24 @@
 ﻿using InfluxData.Net.InfluxDb.Models;
 using Microsoft.Extensions.Logging;
 using System;
-using VeDirectCommunication.TextMode;
+using System.Collections.Generic;
+using VeDirectCommunication.HexMode;
+using VeDirectCommunication.HexMode.Registers;
 
 namespace VictronDataAdapter
 {
     public class VictronStreamAdapter : IVictronStreamAdapter
     {
         private readonly ILogger<VictronStreamAdapter> _logger;
+        private readonly RegisterParser _registerParser;
 
-        public VictronStreamAdapter(ILogger<VictronStreamAdapter> logger)
+        public VictronStreamAdapter(ILogger<VictronStreamAdapter> logger, RegisterParser registerParser)
         {
             _logger = logger;
+            _registerParser = registerParser;
         }
 
-        public Point GetNextDataPoint(VictronTextBlock textBlock)
+        public Point GetNextDataPoint(IDictionary<VictronRegister, byte[]> registers)
         {
             var dataPoint = new Point
             {
@@ -22,19 +26,8 @@ namespace VictronDataAdapter
             };
             
             dataPoint.Timestamp = DateTime.UtcNow;
-
-            if (textBlock == null)
-            {
-                _logger.LogInformation("No Text Message");
-                return null;
-            }
-
-            if (!textBlock.ChecksumValid)
-            {
-                _logger.LogWarning("Invalid Checksum!");
-                return null;
-            }
-            foreach (var field in textBlock.Fields)
+            
+            foreach (var field in registers)
             {
                 _logger.LogDebug("Got Message with Key {MessageKey} Value {MessageValue}", field.Key, field.Value);
 
@@ -54,97 +47,66 @@ namespace VictronDataAdapter
 
         private static void AppendAdditionalData(Point dataPoint)
         {
-            dataPoint.Fields["ChargeCurrent"] = (double)dataPoint.Fields["BatteryCurrent"] + (double)dataPoint.Fields["LoadCurrent"];
-            dataPoint.Fields["LoadPower"] = (double)dataPoint.Fields["BatteryVoltage"] * (double)dataPoint.Fields["LoadCurrent"];
+            dataPoint.Fields["LoadPower"] = (double)dataPoint.Fields["LoadOutputVoltage"] * (double)dataPoint.Fields["LoadCurrent"];
+            dataPoint.Fields["BatteryCurrent"] = (double)dataPoint.Fields["ChargeCurrent"] - (double)dataPoint.Fields["LoadCurrent"];
         }
 
-        private void MapMessage(VictronTextField field, Point dataPoint)
+        private void MapMessage(KeyValuePair<VictronRegister, byte[]> field, Point dataPoint)
         {
             switch (field.Key)
             {
-                case "PID":
-                    dataPoint.Tags["ProductId"] = field.Value;
+                //case "PID":
+                //    dataPoint.Tags["ProductId"] = field.Value;
+                //    break;
+                //case "FW":
+                //    dataPoint.Fields["FirmwareVersion"] = field.Value;
+                //    break;
+                case VictronRegister.SerialNumber:
+                    dataPoint.Tags["SerialNumber"] = _registerParser.ParseString(field.Value);
                     break;
-                case "FW":
-                    dataPoint.Fields["FirmwareVersion"] = field.Value;
+                case VictronRegister.ChargerVoltage:
+                    dataPoint.Fields["BatteryVoltage"] = _registerParser.ParseUInt16(field.Value) * 0.01;
                     break;
-                case "SER#":
-                    dataPoint.Tags["SerialNumber"] = field.Value;
+                case VictronRegister.ChargerCurrent:
+                    dataPoint.Fields["ChargeCurrent"] = _registerParser.ParseUInt16(field.Value) * 0.1;
                     break;
-                case "V":
-                    dataPoint.Fields["BatteryVoltage"] = ParseMilli(field.Value);
+                case VictronRegister.PanelVoltage:
+                    dataPoint.Fields["SolarVoltage"] = _registerParser.ParseUInt16(field.Value) * 0.01;
                     break;
-                case "I":
-                    dataPoint.Fields["BatteryCurrent"] = ParseMilli(field.Value);
+                case VictronRegister.PanelPower:
+                    dataPoint.Fields["SolarPower"] = _registerParser.ParseUInt32(field.Value) * 0.01;
                     break;
-                case "VPV":
-                    dataPoint.Fields["SolarVoltage"] = ParseMilli(field.Value);
+                case VictronRegister.DeviceState:
+                    dataPoint.Fields["ChargeState"] = field.Value[0];
                     break;
-                case "PPV":
-                    dataPoint.Fields["SolarPower"] = ParseInt(field.Value);
+                case VictronRegister.ChargerErrorCode:
+                    dataPoint.Fields["ErrorCode"] = field.Value[0];
                     break;
-                case "CS":
-                    dataPoint.Fields["ChargeState"] = ParseInt(field.Value);
+                case VictronRegister.LoadOutputState:
+                    dataPoint.Fields["LoadOutputState"] = field.Value[0] != 0 ? "1" : "0";
                     break;
-                case "ERR":
-                    dataPoint.Fields["ErrorCode"] = ParseInt(field.Value);
+                case VictronRegister.LoadOutputVoltage:
+                    dataPoint.Fields["LoadOutputVoltage"] = _registerParser.ParseUInt16(field.Value) * 0.01;
                     break;
-                case "LOAD":
-                    dataPoint.Fields["LoadOutputState"] = FormatOnOff(field.Value);
+                case VictronRegister.LoadCurrent:
+                    dataPoint.Fields["LoadCurrent"] = _registerParser.ParseUInt16(field.Value) * 0.1;
                     break;
-                case "IL":
-                    dataPoint.Fields["LoadCurrent"] = ParseMilli(field.Value);
+                //case "MPPT":
+                //    dataPoint.Fields["MpptState"] = ParseInt(field.Value);
+                //    break;
+                case VictronRegister.SystemYield:
+                    dataPoint.Fields["YieldTotal"] = _registerParser.ParseUInt32(field.Value) * 0.01;
                     break;
-                case "MPPT":
-                    dataPoint.Fields["MpptState"] = ParseInt(field.Value);
+                case VictronRegister.ChargerTemperature:
+                    dataPoint.Fields["ChargerTemperature"] = _registerParser.ParseSInt16(field.Value) * 0.01;
                     break;
-                case "H19":
-                    dataPoint.Fields["YieldTotal"] = ParseInt(field.Value) / 100.0;
-                    break;
-                case "H20":
-                case "H21":
-                case "H22":
-                case "H23":
-                case "HSDS":
+                case VictronRegister.DeviceOffReason:
+                    dataPoint.Fields["DeviceOffReason"] = field.Value[0];
                     break;
                 default:
                     _logger.LogWarning("Unsupported Message Key {MessageKey}", field.Key);
                     break;
             }
-        }
-
-        private string FormatOnOff(string value)
-        {
-            switch (value)
-            {
-                case "ON":
-                    return "1";
-                case "OFF":
-                    return "0";
-                default:
-                    _logger.LogError("Invalid OnOff Value {Value}", value);
-                    return "-1";
-            }
-        }
-
-        private double ParseMilli(string value)
-        {
-            if (!int.TryParse(value, out var parsed))
-            {
-                throw new FormatException($"Invalid int value {value}");
-            }
-
-            return parsed / 1000d;
-        }
-
-        private int ParseInt(string value)
-        {
-            if (!int.TryParse(value, out var parsed))
-            {
-                throw new FormatException($"Invalid int value {value}");
-            }
-
-            return parsed;
         }
     }
 }

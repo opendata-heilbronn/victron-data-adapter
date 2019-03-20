@@ -1,10 +1,11 @@
 ﻿using InfluxData.Net.InfluxDb.Models;
-using VeDirectCommunication.TextMode;
+using System.Collections.Generic;
+using VeDirectCommunication.HexMode;
 
 namespace VictronDataAdapter
 {
     public interface IVictronStreamAdapter
     {
-        Point GetNextDataPoint(VictronTextBlock textBlock);
+        Point GetNextDataPoint(IDictionary<VictronRegister, byte[]> registers);
     }
 }

@@ -6,6 +6,9 @@
         ProductId = 0x0100,
         GroupId = 0x0104,
         DeviceInstance = 0x0105,
+        DeviceClass = 0x0106,
+        SerialNumber = 0x010A,
+        ModelName = 0x010B,
         Capabilities = 0x0140,
 
         //Generic device control
@@ -71,6 +74,7 @@
         //[...]
 
         //Lighting controller timer
+        SolarActivity = 0x2030,
         //[...]
 
         //Ve.Direct port functions
@@ -92,6 +96,10 @@
         //[...]
 
         //Remote control
+        BatteryVoltageSense = 0x2002,
+        BatteryTemperatureSense = 0x2003,
+        SwitchBankStatus = 0x2005,
+        AbsorptionTimeLeft = 0x2008
         //[...]
     }
 }

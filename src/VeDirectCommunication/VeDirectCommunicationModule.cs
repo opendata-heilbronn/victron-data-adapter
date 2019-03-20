@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using VeDirectCommunication.HexMode;
+using VeDirectCommunication.HexMode.Registers;
 using VeDirectCommunication.Parser;
 
 namespace VeDirectCommunication
@@ -13,6 +14,7 @@ namespace VeDirectCommunication
             services.AddSingleton<IVictronHexMessageSerializer, VictronHexMessageSerializer>();
             services.AddTransient<IVictronStream, TVictronStream>();
             services.AddTransient<IVeDirectDevice, VeDirectDevice>();
+            services.AddTransient<RegisterParser>();
         }
     }
 }

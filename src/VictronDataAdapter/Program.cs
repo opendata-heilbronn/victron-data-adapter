@@ -14,7 +14,7 @@ namespace VictronDataAdapter
             var host = new HostBuilder()
                 .ConfigureLogging(x =>
                 {
-                    x.AddConsole();
+                    x.AddConsole(consoleConfig => consoleConfig.IncludeScopes = false);
                 })
                 .ConfigureServices(ConfigureServices)
                 .ConfigureAppConfiguration((ctx, x) =>

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using VeDirectCommunication.Exceptions;
 using VeDirectCommunication.HexMode;
 using VeDirectCommunication.HexMode.HexMessages;
+using VeDirectCommunication.HexMode.Registers;
 using VeDirectCommunication.Parser;
 using VeDirectCommunication.TextMode;
 
@@ -15,8 +16,8 @@ namespace VeDirectCommunication
 {
     internal class VeDirectDevice : IVeDirectDevice
     {
-        public event TextMessageReceivedHandler TextMessageReceived;
-        public event AsyncMessageReceivedHandler AsyncMessageReceived;
+        public event EventHandler<TextMessageReceivedEventArgs> TextMessageReceived;
+        public event EventHandler<AsyncMessageReceivedEventArgs> AsyncMessageReceived;
 
         private const int _deviceResponseTimeout = 10000;
 
@@ -24,9 +25,9 @@ namespace VeDirectCommunication
         private readonly ILogger<VeDirectDevice> _logger;
         private readonly IVictronParser _parser;
         private readonly IVictronHexMessageSerializer _hexSerializer;
-
+        private readonly RegisterParser _registerParser;
         private readonly IList<PendingGetResponse> _pendingGetResponses = new List<PendingGetResponse>();
-        private PendingPingResponse _pendingPingResponse = null;
+        private readonly IList<PendingPingResponse> _pendingPingResponses = new List<PendingPingResponse>();
 
         private bool _running;
         private VictronParserState _parserState;
@@ -34,12 +35,18 @@ namespace VeDirectCommunication
         private SemaphoreSlim _startStopLock = new SemaphoreSlim(1);
         private SemaphoreSlim _writeLock = new SemaphoreSlim(1);
         
-        public VeDirectDevice(IVictronStream victronStream, ILogger<VeDirectDevice> logger, IVictronParser parser, IVictronHexMessageSerializer hexMessageSerializer)
+        public VeDirectDevice(
+            IVictronStream victronStream,
+            ILogger<VeDirectDevice> logger,
+            IVictronParser parser,
+            IVictronHexMessageSerializer hexMessageSerializer,
+            RegisterParser registerParser)
         {
             _victronStream = victronStream;
             _logger = logger;
             _parser = parser;
             _hexSerializer = hexMessageSerializer;
+            _registerParser = registerParser;
         }
 
         public async Task Start()
@@ -121,12 +128,15 @@ namespace VeDirectCommunication
 
         private void HandlePingResponse(PingResponseMessage pingResponse)
         {
-            if(_pendingPingResponse == null)
+            var pendingResponse = _pendingPingResponses.FirstOrDefault();
+            if (pendingResponse == null)
             {
                 return; // No request found for this response
             }
 
-            _pendingPingResponse.TaskCompletionSource.SetResult(pingResponse.Version);
+            var version = _registerParser.ParsePingResponse(pingResponse.Version);
+
+            pendingResponse.TaskCompletionSource.SetResult(version);
         }
 
         private void HandleAsyncRegisterResponse(AsyncRegisterResponseMessage asyncResponse)
@@ -192,6 +202,7 @@ namespace VeDirectCommunication
             {
                 _pendingGetResponses.Add(pendingResponse);
                 await _victronStream.Write(Encoding.ASCII.GetBytes(command));
+                Thread.Sleep(100);
             }
             finally
             {
@@ -214,18 +225,21 @@ namespace VeDirectCommunication
             throw new NotImplementedException(); // TODO
         }
 
-        public async Task<byte[]> Ping()
+        public async Task<VictronVersion> Ping()
         {
             var command = _hexSerializer.Serialize(HexCommand.Ping, new byte[0]);
 
-            var tcs = new TaskCompletionSource<byte[]>();
+            var tcs = new TaskCompletionSource<VictronVersion>();
+
+            var pendingResponse = new PendingPingResponse
+            {
+                TaskCompletionSource = tcs
+            };
+
             await _writeLock.WaitAsync();
             try
             {
-                _pendingPingResponse = new PendingPingResponse
-                {
-                    TaskCompletionSource = tcs
-                };
+                _pendingPingResponses.Add(pendingResponse);
                 await _victronStream.Write(Encoding.ASCII.GetBytes(command));
             }
             finally
@@ -239,7 +253,7 @@ namespace VeDirectCommunication
             }
             finally
             {
-                _pendingPingResponse = null;
+                _pendingPingResponses.Remove(pendingResponse);
             }
         }
 
@@ -268,7 +282,7 @@ namespace VeDirectCommunication
 
         private class PendingPingResponse
         {
-            public TaskCompletionSource<byte[]> TaskCompletionSource { get; set; }
+            public TaskCompletionSource<VictronVersion> TaskCompletionSource { get; set; }
         }
     }
 }

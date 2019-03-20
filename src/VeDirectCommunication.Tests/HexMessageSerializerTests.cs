@@ -13,7 +13,7 @@ namespace VictronDataAdapter.Tests
 
             var serialized = sut.Serialize(HexCommand.Get, new byte[] { 0xF0, 0xED, 0x00});
 
-            Assert.Equal(":7F0ED0071", serialized);
+            Assert.Equal(":7F0ED0071\n", serialized);
         }
 
         [Fact]
@@ -23,7 +23,7 @@ namespace VictronDataAdapter.Tests
             
             var serialized = sut.SerializeGetRegister(VictronRegister.BatteryMaxCurrent);
 
-            Assert.Equal(":7F0ED0071", serialized);
+            Assert.Equal(":7F0ED0071\n", serialized);
         }
 
         [Fact]
@@ -39,9 +39,5 @@ namespace VictronDataAdapter.Tests
             Assert.Equal(GetSetResponseFlags.None, getMessage.Flags);
             Assert.Equal(new byte[] { 0x96, 0x00 }, getMessage.RegisterValue);
         }
-
-
-        //Get Model Name = :70B010071
-        //Response = :70B0100536D617274536F6C61722043686172676572204D505054203130302F313500B7
     }
 }
