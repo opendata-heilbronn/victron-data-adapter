@@ -1,4 +1,5 @@
-﻿using InfluxData.Net.InfluxDb;
+﻿using InfluxData.Net.Common.Enums;
+using InfluxData.Net.InfluxDb;
 using InfluxData.Net.InfluxDb.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -67,7 +68,7 @@ namespace VictronDataAdapter
             var asyncRegisters = SupportedAsyncRegisters.Get(version).ToList();
             _asyncRegisters = asyncRegisters;
 
-            //_writer = new InfluxDbClient(_influxConfig.Endpoint, _influxConfig.Username, _influxConfig.Password, InfluxDbVersion.Latest);
+            _writer = new InfluxDbClient(_influxConfig.Endpoint, _influxConfig.Username, _influxConfig.Password, InfluxDbVersion.Latest);
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Task.Run(() => GetNonAsync(asyncRegisters));
@@ -153,7 +154,7 @@ namespace VictronDataAdapter
 
                 try
                 {
-                    //await _writer.Client.WriteAsync(toSend, _influxConfig.Database);
+                    await _writer.Client.WriteAsync(toSend, _influxConfig.Database);
 
                     _logger.LogInformation("Sent {Count} data points...", toSend.Count);
                 }

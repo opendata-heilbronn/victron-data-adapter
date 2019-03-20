@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using System;
 using VeDirectCommunication;
+using Serilog;
 
 namespace VictronDataAdapter
 {
@@ -14,7 +14,11 @@ namespace VictronDataAdapter
             var host = new HostBuilder()
                 .ConfigureLogging(x =>
                 {
-                    x.AddConsole(consoleConfig => consoleConfig.IncludeScopes = false);
+                    Log.Logger = new LoggerConfiguration()
+                        .Enrich.FromLogContext()
+                        .WriteTo.Console()
+                        .CreateLogger();
+                    x.AddSerilog();
                 })
                 .ConfigureServices(ConfigureServices)
                 .ConfigureAppConfiguration((ctx, x) =>
@@ -49,10 +53,10 @@ namespace VictronDataAdapter
         private static void ConfigureServices(HostBuilderContext context, IServiceCollection services)
         {
             services.AddSingleton<IVictronStreamAdapter, VictronStreamAdapter>();
-            
+
             services.Configure<IpDataSourceConfig>(context.Configuration.GetSection("IpDataSource"));
             services.UseVeDirectCommunication<NetworkVictronStream>();
-            
+
             services.Configure<InfluxDbConfiguration>(context.Configuration.GetSection("InfluxDb"));
             services.AddHostedService<Host>();
         }
