@@ -74,7 +74,8 @@ namespace VictronDataAdapter
                     dataPoint.Fields["SolarVoltage"] = _registerParser.ParseUInt16(field.Value) * 0.01;
                     break;
                 case VictronRegister.PanelPower:
-                    dataPoint.Fields["SolarPower"] = _registerParser.ParseUInt32(field.Value) * 0.01;
+                    dataPoint.Fields["SolarPower"] = (int)(_registerParser.ParseUInt32(field.Value) * 0.01);
+                    dataPoint.Fields["SolarPowerNew"] = _registerParser.ParseUInt32(field.Value) * 0.01;
                     break;
                 case VictronRegister.DeviceState:
                     dataPoint.Fields["ChargeState"] = (int)field.Value[0];
