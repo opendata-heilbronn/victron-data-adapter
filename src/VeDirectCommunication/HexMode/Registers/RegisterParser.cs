@@ -42,7 +42,9 @@ namespace VeDirectCommunication.HexMode.Registers
                 throw new ArgumentException("Invalid String");
             }
 
-            return Encoding.ASCII.GetString(bytes, 0, Array.FindIndex(bytes, x => x == 0x00) - 1);
+            var nulPosition = Array.FindIndex(bytes, x => x == 0x00);
+
+            return Encoding.ASCII.GetString(bytes, 0, nulPosition == -1 ? bytes.Length : nulPosition);
         }
 
         public uint ParseUInt32(byte[] bytes)
