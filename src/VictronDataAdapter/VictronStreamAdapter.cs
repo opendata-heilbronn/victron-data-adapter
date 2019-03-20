@@ -77,10 +77,10 @@ namespace VictronDataAdapter
                     dataPoint.Fields["SolarPower"] = _registerParser.ParseUInt32(field.Value) * 0.01;
                     break;
                 case VictronRegister.DeviceState:
-                    dataPoint.Fields["ChargeState"] = field.Value[0];
+                    dataPoint.Fields["ChargeState"] = (int)field.Value[0];
                     break;
                 case VictronRegister.ChargerErrorCode:
-                    dataPoint.Fields["ErrorCode"] = field.Value[0];
+                    dataPoint.Fields["ErrorCode"] = (int)field.Value[0];
                     break;
                 case VictronRegister.LoadOutputState:
                     dataPoint.Fields["LoadOutputState"] = field.Value[0] != 0 ? "1" : "0";
