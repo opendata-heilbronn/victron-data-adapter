@@ -80,7 +80,7 @@ namespace VictronDataAdapter
 
         private async Task InitStats()
         {
-            var tasks = _statsRegisters.Concat(new[] { VictronRegister.SerialNumber })
+            var tasks = _statsRegisters.Concat(new[] { VictronRegister.SerialNumber, VictronRegister.ProductId })
                 .Select(register =>
                     _device.GetRegister(register)
                         .ContinueWith(byteTask => _currentStats[register] = byteTask.Result));

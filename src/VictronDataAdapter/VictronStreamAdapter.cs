@@ -55,9 +55,9 @@ namespace VictronDataAdapter
         {
             switch (field.Key)
             {
-                //case "PID":
-                //    dataPoint.Tags["ProductId"] = field.Value;
-                //    break;
+                case VictronRegister.ProductId:
+                    dataPoint.Tags["ProductId"] = $"0x{field.Value[2]:X2}{field.Value[1]:X2}";
+                    break;
                 //case "FW":
                 //    dataPoint.Fields["FirmwareVersion"] = field.Value;
                 //    break;
