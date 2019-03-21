@@ -25,7 +25,6 @@ namespace VeDirectCommunication
         private readonly ILogger<VeDirectDevice> _logger;
         private readonly VictronParser _parser;
         private readonly VictronHexMessageSerializer _hexSerializer;
-        private readonly RegisterParser _registerParser;
         private readonly IList<PendingGetResponse> _pendingGetResponses = new List<PendingGetResponse>();
         private readonly IList<PendingPingResponse> _pendingPingResponses = new List<PendingPingResponse>();
 
@@ -43,7 +42,6 @@ namespace VeDirectCommunication
             _logger = logger;
             _parser = new VictronParser();
             _hexSerializer = new VictronHexMessageSerializer();
-            _registerParser = new RegisterParser();
         }
 
         public async Task Start()
@@ -131,9 +129,7 @@ namespace VeDirectCommunication
                 return; // No request found for this response
             }
 
-            var version = _registerParser.ParsePingResponse(pingResponse.Version);
-
-            pendingResponse.TaskCompletionSource.SetResult(version);
+            pendingResponse.TaskCompletionSource.SetResult(pingResponse.Version);
         }
 
         private void HandleAsyncRegisterResponse(AsyncRegisterResponseMessage asyncResponse)
@@ -222,11 +218,11 @@ namespace VeDirectCommunication
             throw new NotImplementedException(); // TODO
         }
 
-        public async Task<VictronVersion> Ping()
+        public async Task<byte[]> Ping()
         {
             var command = _hexSerializer.Serialize(HexCommand.Ping, new byte[0]);
 
-            var tcs = new TaskCompletionSource<VictronVersion>();
+            var tcs = new TaskCompletionSource<byte[]>();
 
             var pendingResponse = new PendingPingResponse
             {
@@ -279,7 +275,7 @@ namespace VeDirectCommunication
 
         private class PendingPingResponse
         {
-            public TaskCompletionSource<VictronVersion> TaskCompletionSource { get; set; }
+            public TaskCompletionSource<byte[]> TaskCompletionSource { get; set; }
         }
     }
 }

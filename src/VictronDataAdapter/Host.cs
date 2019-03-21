@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using VeDirectCommunication;
 using VeDirectCommunication.HexMode;
+using VeDirectCommunication.HexMode.HexMessages.RegisterSpecific;
 
 namespace VictronDataAdapter
 {
@@ -22,6 +23,7 @@ namespace VictronDataAdapter
         private readonly ILogger<Host> _logger;
         private readonly InfluxDbConfiguration _influxConfig;
         private readonly CancellationTokenSource _cts;
+        private readonly RegisterParser _registerParser;
         private InfluxDbClient _writer;
         private ConcurrentQueue<Point> _sendQueue;
 
@@ -47,13 +49,14 @@ namespace VictronDataAdapter
         public Host(IVictronStreamAdapter streamAdapter, IOptions<IpDataSourceConfig> dataSourceConfig, ILoggerFactory loggerFactory, IOptions<InfluxDbConfiguration> influxConfig)
         {
             _streamAdapter = streamAdapter;
-
+            
             var stream = new NetworkVictronStream(dataSourceConfig);
             _device = new VeDirectDevice(stream, loggerFactory.CreateLogger<VeDirectDevice>());
             _logger = loggerFactory.CreateLogger<Host>();
             _influxConfig = influxConfig.Value;
             _sendQueue = new ConcurrentQueue<Point>();
             _cts = new CancellationTokenSource();
+            _registerParser = new RegisterParser();
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -64,7 +67,8 @@ namespace VictronDataAdapter
             _device.AsyncMessageReceived += AsyncReceived;
 
             _logger.LogInformation("Getting Device version...");
-            var version = await _device.Ping();
+            var pingResponse = await _device.Ping();
+            var version = _registerParser.ParsePingResponse(pingResponse);
             var asyncRegisters = SupportedAsyncRegisters.Get(version).ToList();
             _asyncRegisters = asyncRegisters;
 
