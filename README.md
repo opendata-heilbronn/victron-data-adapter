@@ -2,7 +2,7 @@
 .NET Core Adapter to forward the streaming data from a Victron solar charge controller to a InfluxDB
 
 # VeDirectCommunication
-.NET Standard implementation of the Victron Solar Charge Controller Hex and Text modes
+.NET Standard implementation of the protocols (Text and Hex) used by Victron Solar Charge Controllers (BlueSolar/SmartSolar)
 
 ## Initialization, Basic Usage
 To read and write the data stream sent by the Charge Controller the `VeDirectDevice` needs a `IVictronStream`, a sample implementation with a TCP Socket is implemented by `NetworkVictronStream`. The `NetworkVictronStream` takes an `IOptions<IpDataSourceConfig>` and an `ILogger<VeDirectDevice>` as arguments. Consult the Microsoft manual for `Microsoft.Extensions.Options` and `Microsoft.Extensions.Logging` if you don't know how to get those.
@@ -52,7 +52,7 @@ private void TextReceived(object sender, TextMessageReceivedEventArgs e)
 }
 ```
 
-### advanced way (Hex Async mode)
+### Advanced way (Hex Async mode)
 If there are have been hex messages in the last two minutes (you can use the `Ping()` method to force this) the charge controller sends some registers by itself. You can get the supported Registers by calling `SupportedAsyncRegisters.Get(VictronVersion)` with the charge controller firmware version.
 
 #### Getting the supported registers (run this in an async method)
@@ -78,7 +78,7 @@ private void AsyncReceived(object sender, AsyncMessageReceivedEventArgs e)
 
 
 ## TODO:
-- support hex mode
+- hex mode:
 	- add SetRegister support
 	- version release candidate
 	- capabilities enum
