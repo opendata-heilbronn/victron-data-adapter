@@ -9,7 +9,7 @@ To read and write the data stream sent by the Charge Controller the `VeDirectDev
 
 You also need a `RegisterParser` to do something useful with the data the Victron device returns.
 
-### Complete example: Getting a single register
+### Complete example: Getting a single register (run this in an async method)
 ```csharp
 var networkConfig = new IpDataSourceConfig
 {
@@ -55,7 +55,7 @@ private void TextReceived(object sender, TextMessageReceivedEventArgs e)
 ### advanced way (Hex Async mode)
 If there are have been hex messages in the last two minutes (you can use the `Ping()` method to force this) the charge controller sends some registers by itself. You can get the supported Registers by calling `SupportedAsyncRegisters.Get(VictronVersion)` with the charge controller firmware version.
 
-#### Getting the supported registers
+#### Getting the supported registers (run this in an async method)
 ```csharp
 var pingResponse = await _device.Ping();
 var version = _registerParser.ParsePingResponse(pingResponse);
