@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,15 +6,9 @@ using VeDirectCommunication.TextMode;
 
 namespace VeDirectCommunication.Parser
 {
-    internal class VictronParser : IVictronParser
+    internal class VictronParser
     {
-        private readonly ILogger<VictronParser> _logger;
         private const string ChecksumTagName = "Checksum";
-
-        public VictronParser(ILogger<VictronParser> logger)
-        {
-            _logger = logger;
-        }
 
         public IList<IVictronMessage> Parse(byte[] bytes, VictronParserState state)
         {
@@ -101,8 +94,6 @@ namespace VeDirectCommunication.Parser
                 case ParseState.Checksum:
                     {
                         bool valid = state.Checksum == 0;
-                        if (!valid)
-                            this._logger.LogError($"Invalid frame checksum 0x{state.Checksum:X2}");
                         state.Checksum = 0;
                         state.ParseState = ParseState.Idle;
                         var records = state.Records;

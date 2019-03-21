@@ -1,5 +1,5 @@
 ﻿using System;
-using VeDirectCommunication.HexMode.Registers;
+using VeDirectCommunication.HexMode.HexMessages.RegisterSpecific;
 using Xunit;
 
 namespace VeDirectCommunication.Tests

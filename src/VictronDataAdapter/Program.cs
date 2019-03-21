@@ -55,7 +55,6 @@ namespace VictronDataAdapter
             services.AddSingleton<IVictronStreamAdapter, VictronStreamAdapter>();
 
             services.Configure<IpDataSourceConfig>(context.Configuration.GetSection("IpDataSource"));
-            services.UseVeDirectCommunication<NetworkVictronStream>();
 
             services.Configure<InfluxDbConfiguration>(context.Configuration.GetSection("InfluxDb"));
             services.AddHostedService<Host>();

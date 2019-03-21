@@ -1,4 +1,4 @@
-﻿namespace VeDirectCommunication.HexMode.Registers
+﻿namespace VeDirectCommunication.HexMode.HexMessages.RegisterSpecific
 {
     public enum FirmwareType
     {

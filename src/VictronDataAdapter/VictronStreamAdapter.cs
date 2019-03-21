@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using VeDirectCommunication.HexMode;
-using VeDirectCommunication.HexMode.Registers;
+using VeDirectCommunication.HexMode.HexMessages.RegisterSpecific;
 
 namespace VictronDataAdapter
 {
@@ -12,10 +12,10 @@ namespace VictronDataAdapter
         private readonly ILogger<VictronStreamAdapter> _logger;
         private readonly RegisterParser _registerParser;
 
-        public VictronStreamAdapter(ILogger<VictronStreamAdapter> logger, RegisterParser registerParser)
+        public VictronStreamAdapter(ILogger<VictronStreamAdapter> logger)
         {
             _logger = logger;
-            _registerParser = registerParser;
+            _registerParser = new RegisterParser();
         }
 
         public Point GetNextDataPoint(IDictionary<VictronRegister, byte[]> registers)

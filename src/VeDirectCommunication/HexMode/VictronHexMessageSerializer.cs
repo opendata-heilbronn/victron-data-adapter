@@ -5,7 +5,7 @@ using VeDirectCommunication.HexMode.HexMessages;
 
 namespace VeDirectCommunication.HexMode
 {
-    internal class VictronHexMessageSerializer : IVictronHexMessageSerializer
+    internal class VictronHexMessageSerializer
     {
         public string SerializeGetRegister(VictronRegister register)
         {

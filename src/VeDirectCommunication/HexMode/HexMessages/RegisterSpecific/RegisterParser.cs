@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace VeDirectCommunication.HexMode.Registers
+namespace VeDirectCommunication.HexMode.HexMessages.RegisterSpecific
 {
     public class RegisterParser
     {
@@ -23,6 +23,12 @@ namespace VeDirectCommunication.HexMode.Registers
                 FirmwareType = (FirmwareType)type,
                 VersionNumber = new Version(majorVersion, minorVersion)
             };
+        }
+
+        public Capabilities ParseCapabilities(byte[] bytes)
+        {
+            var num = ParseUInt32(bytes);
+            return (Capabilities)num;
         }
 
         public ushort ParseUInt16(byte[] bytes)

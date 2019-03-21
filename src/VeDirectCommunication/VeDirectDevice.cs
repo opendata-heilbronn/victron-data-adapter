@@ -8,13 +8,13 @@ using System.Threading.Tasks;
 using VeDirectCommunication.Exceptions;
 using VeDirectCommunication.HexMode;
 using VeDirectCommunication.HexMode.HexMessages;
-using VeDirectCommunication.HexMode.Registers;
+using VeDirectCommunication.HexMode.HexMessages.RegisterSpecific;
 using VeDirectCommunication.Parser;
 using VeDirectCommunication.TextMode;
 
 namespace VeDirectCommunication
 {
-    internal class VeDirectDevice : IVeDirectDevice
+    public class VeDirectDevice
     {
         public event EventHandler<TextMessageReceivedEventArgs> TextMessageReceived;
         public event EventHandler<AsyncMessageReceivedEventArgs> AsyncMessageReceived;
@@ -23,8 +23,8 @@ namespace VeDirectCommunication
 
         private readonly IVictronStream _victronStream;
         private readonly ILogger<VeDirectDevice> _logger;
-        private readonly IVictronParser _parser;
-        private readonly IVictronHexMessageSerializer _hexSerializer;
+        private readonly VictronParser _parser;
+        private readonly VictronHexMessageSerializer _hexSerializer;
         private readonly RegisterParser _registerParser;
         private readonly IList<PendingGetResponse> _pendingGetResponses = new List<PendingGetResponse>();
         private readonly IList<PendingPingResponse> _pendingPingResponses = new List<PendingPingResponse>();
@@ -37,16 +37,13 @@ namespace VeDirectCommunication
         
         public VeDirectDevice(
             IVictronStream victronStream,
-            ILogger<VeDirectDevice> logger,
-            IVictronParser parser,
-            IVictronHexMessageSerializer hexMessageSerializer,
-            RegisterParser registerParser)
+            ILogger<VeDirectDevice> logger)
         {
             _victronStream = victronStream;
             _logger = logger;
-            _parser = parser;
-            _hexSerializer = hexMessageSerializer;
-            _registerParser = registerParser;
+            _parser = new VictronParser();
+            _hexSerializer = new VictronHexMessageSerializer();
+            _registerParser = new RegisterParser();
         }
 
         public async Task Start()
@@ -220,7 +217,7 @@ namespace VeDirectCommunication
             }
         }
 
-        public async Task SetRegister(VictronRegister register, byte[] data)
+        public Task SetRegister(VictronRegister register, byte[] data)
         {
             throw new NotImplementedException(); // TODO
         }

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VeDirectCommunication.HexMode.Registers
+namespace VeDirectCommunication.HexMode.HexMessages.RegisterSpecific
 {
     public class VictronVersion
     {

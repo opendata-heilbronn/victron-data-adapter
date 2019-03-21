@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using VeDirectCommunication.HexMode.Registers;
+using VeDirectCommunication.HexMode.HexMessages.RegisterSpecific;
 
 namespace VeDirectCommunication.HexMode
 {

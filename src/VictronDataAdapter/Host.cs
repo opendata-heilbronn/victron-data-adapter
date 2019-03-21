@@ -18,8 +18,7 @@ namespace VictronDataAdapter
     internal class Host : IHostedService
     {
         private readonly IVictronStreamAdapter _streamAdapter;
-        private readonly IVeDirectDevice _device;
-        private readonly IOptions<IpDataSourceConfig> _dataSourceConfig;
+        private readonly VeDirectDevice _device;
         private readonly ILogger<Host> _logger;
         private readonly InfluxDbConfiguration _influxConfig;
         private readonly CancellationTokenSource _cts;
@@ -45,12 +44,13 @@ namespace VictronDataAdapter
             VictronRegister.DeviceOffReason
         };
 
-        public Host(IVictronStreamAdapter streamAdapter, IVeDirectDevice device, IOptions<IpDataSourceConfig> dataSourceConfig, ILogger<Host> logger, IOptions<InfluxDbConfiguration> influxConfig)
+        public Host(IVictronStreamAdapter streamAdapter, IOptions<IpDataSourceConfig> dataSourceConfig, ILoggerFactory loggerFactory, IOptions<InfluxDbConfiguration> influxConfig)
         {
             _streamAdapter = streamAdapter;
-            _device = device;
-            _dataSourceConfig = dataSourceConfig;
-            _logger = logger;
+
+            var stream = new NetworkVictronStream(dataSourceConfig);
+            _device = new VeDirectDevice(stream, loggerFactory.CreateLogger<VeDirectDevice>());
+            _logger = loggerFactory.CreateLogger<Host>();
             _influxConfig = influxConfig.Value;
             _sendQueue = new ConcurrentQueue<Point>();
             _cts = new CancellationTokenSource();
@@ -173,10 +173,9 @@ namespace VictronDataAdapter
             }
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _device.Stop();
-            return Task.CompletedTask;
+            await _device.Stop();
         }
     }
 }
