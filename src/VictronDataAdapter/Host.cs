@@ -179,6 +179,7 @@ namespace VictronDataAdapter
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            _cts.Cancel();
             await _device.Stop();
         }
     }
