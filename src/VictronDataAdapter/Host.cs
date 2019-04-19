@@ -150,7 +150,7 @@ namespace VictronDataAdapter
             {
                 currentStats = _currentStats.ToDictionary(x => x.Key, x => x.Value);
             }
-            _logger.LogInfo("Added {StatCount} Stats to send queue", currentStats.Count);
+            _logger.LogInformation("Added {StatCount} Stats to send queue", currentStats.Count);
             var point = _streamAdapter.GetNextDataPoint(currentStats);
             _sendQueue.Enqueue(point);
         }
