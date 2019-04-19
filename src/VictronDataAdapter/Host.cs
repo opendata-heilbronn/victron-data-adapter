@@ -49,7 +49,7 @@ namespace VictronDataAdapter
         public Host(IVictronStreamAdapter streamAdapter, IOptions<IpDataSourceConfig> dataSourceConfig, ILoggerFactory loggerFactory, IOptions<InfluxDbConfiguration> influxConfig)
         {
             _streamAdapter = streamAdapter;
-            
+
             var stream = new NetworkVictronStream(dataSourceConfig);
             _device = new VeDirectDevice(stream, loggerFactory.CreateLogger<VeDirectDevice>());
             _logger = loggerFactory.CreateLogger<Host>();
@@ -64,13 +64,15 @@ namespace VictronDataAdapter
             await _device.Start();
             _logger.LogInformation("Initializing Stats...");
             await InitStats();
-            _device.AsyncMessageReceived += AsyncReceived;
 
             _logger.LogInformation("Getting Device version...");
             var pingResponse = await _device.Ping();
             var version = _registerParser.ParsePingResponse(pingResponse);
+
+            _logger.LogInformation("Start handling async messages...");
             var asyncRegisters = SupportedAsyncRegisters.Get(version).ToList();
             _asyncRegisters = asyncRegisters;
+            _device.AsyncMessageReceived += AsyncReceived;
 
             _writer = new InfluxDbClient(_influxConfig.Endpoint, _influxConfig.Username, _influxConfig.Password, InfluxDbVersion.Latest);
 
