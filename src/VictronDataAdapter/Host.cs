@@ -130,7 +130,7 @@ namespace VictronDataAdapter
                 {
                     var tasks = nonAsync.Select(register =>
                         _device.GetRegister(register)
-                            .ContinueWith(byteTask => _currentStats[register] = byteTask.Result));
+                            .ContinueWith(byteTask => SetStat(register, byteTask.Result)));
 
                     await Task.WhenAll(tasks);
                     AddCurrentToQueue();
