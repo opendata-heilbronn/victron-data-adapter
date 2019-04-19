@@ -27,7 +27,7 @@ namespace VictronDataAdapter
         private InfluxDbClient _writer;
         private ConcurrentQueue<Point> _sendQueue;
 
-        private readonly IDictionary<VictronRegister, byte[]> _currentStats = new ConcurrentDictionary<VictronRegister, byte[]>();
+        private readonly IDictionary<VictronRegister, byte[]> _currentStats = new Dictionary<VictronRegister, byte[]>();
         private string _serialNumber = string.Empty;
         private List<VictronRegister> _asyncRegisters;
         private readonly VictronRegister[] _statsRegisters = new VictronRegister[]
@@ -89,10 +89,18 @@ namespace VictronDataAdapter
             var tasks = _statsRegisters.Concat(new[] { VictronRegister.SerialNumber, VictronRegister.ProductId })
                 .Select(register =>
                     _device.GetRegister(register)
-                        .ContinueWith(byteTask => _currentStats[register] = byteTask.Result));
+                        .ContinueWith(byteTask => SetStat(register, byteTask.Result)));
 
             await Task.WhenAll(tasks);
             AddCurrentToQueue();
+        }
+
+        private void SetStat(VictronRegister register, byte[] data)
+        {
+            lock (_currentStats)
+            {
+                _currentStats[register] = data;
+            }
         }
 
         private void AsyncReceived(object sender, AsyncMessageReceivedEventArgs e)
@@ -108,7 +116,7 @@ namespace VictronDataAdapter
                 return;
             }
 
-            _currentStats[e.Data.Register] = e.Data.RegisterValue;
+            SetStat(e.Data.Register, e.Data.RegisterValue);
             AddCurrentToQueue();
         }
 
@@ -137,7 +145,13 @@ namespace VictronDataAdapter
 
         private void AddCurrentToQueue()
         {
-            var point = _streamAdapter.GetNextDataPoint(_currentStats);
+            IDictionary<VictronRegister, byte[]> currentStats;
+            lock (_currentStats)
+            {
+                currentStats = _currentStats.ToDictionary(x => x.Key, x => x.Value);
+            }
+
+            var point = _streamAdapter.GetNextDataPoint(currentStats);
             _sendQueue.Enqueue(point);
         }
 
