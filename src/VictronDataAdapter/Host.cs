@@ -159,7 +159,7 @@ namespace VictronDataAdapter
         {
             while (!_cts.IsCancellationRequested)
             {
-                await Task.Delay(1000, _cts.Token);
+                await Task.Delay(10000, _cts.Token);
 
                 var toSend = new List<Point>();
 
