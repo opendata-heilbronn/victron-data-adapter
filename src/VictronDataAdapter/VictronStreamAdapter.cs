@@ -50,7 +50,6 @@ namespace VictronDataAdapter
             dataPoint.Fields["LoadPower"] = (double)dataPoint.Fields["LoadOutputVoltage"] * (double)dataPoint.Fields["LoadCurrent"];
             dataPoint.Fields["BatteryCurrent"] = (double)dataPoint.Fields["ChargeCurrent"] - (double)dataPoint.Fields["LoadCurrent"];
             var chargeState = (DeviceState)((int)dataPoint.Fields["ChargeState"]);
-            dataPoint.Fields["SolarPowerWasted"] = chargeState == DeviceState.Absorption || chargeState == DeviceState.Float;
         }
 
         private void MapMessage(KeyValuePair<VictronRegister, byte[]> field, Point dataPoint)
@@ -76,8 +75,7 @@ namespace VictronDataAdapter
                     dataPoint.Fields["SolarVoltage"] = _registerParser.ParseUInt16(field.Value) * 0.01;
                     break;
                 case VictronRegister.PanelPower:
-                    dataPoint.Fields["SolarPower"] = (int)(_registerParser.ParseUInt32(field.Value) * 0.01);
-                    dataPoint.Fields["SolarPowerNew"] = _registerParser.ParseUInt32(field.Value) * 0.01;
+                    dataPoint.Fields["SolarPower"] = _registerParser.ParseUInt32(field.Value) * 0.01;
                     break;
                 case VictronRegister.DeviceState:
                     dataPoint.Fields["ChargeState"] = (int)field.Value[0];
