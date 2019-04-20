@@ -6,7 +6,7 @@ services:
     environment:
       - IpDataSource__Hostname=192.168.11.11
       - IpDataSource__Port=20108
-      - InfluxDb__Endpoint=http://192.168.11.10:8086
+      - InfluxDb__Endpoint=http://192.168.11.12:8086
       - InfluxDb__Username=admin
       - InfluxDb__Password=admin
       - InfluxDb__Database=solar
