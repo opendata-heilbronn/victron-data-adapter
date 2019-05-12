@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using VeDirectCommunication.Exceptions;
 using VeDirectCommunication.HexMode;
 using VeDirectCommunication.HexMode.HexMessages;
-using VeDirectCommunication.HexMode.HexMessages.RegisterSpecific;
 using VeDirectCommunication.Parser;
 using VeDirectCommunication.TextMode;
 
@@ -123,13 +122,17 @@ namespace VeDirectCommunication
 
         private void HandlePingResponse(PingResponseMessage pingResponse)
         {
-            var pendingResponse = _pendingPingResponses.FirstOrDefault();
-            if (pendingResponse == null)
+            foreach (var response in _pendingPingResponses.ToList())
             {
-                return; // No request found for this response
+                try
+                {
+                    response.TaskCompletionSource.SetResult(pingResponse.Version);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Something went wrong while completing Task.");
+                }
             }
-
-            pendingResponse.TaskCompletionSource.SetResult(pingResponse.Version);
         }
 
         private void HandleAsyncRegisterResponse(AsyncRegisterResponseMessage asyncResponse)
@@ -139,24 +142,30 @@ namespace VeDirectCommunication
 
         private void HandleGetRegisterResponse(GetRegisterResponseMessage getMessage)
         {
-            var pendingResponse = _pendingGetResponses.FirstOrDefault(x => x.Register == getMessage.Register);
-            if(pendingResponse == null)
-            {
-                return; // No request found for this response
-            }
+            var pendingRegisterResponses = _pendingGetResponses.Where(x => x.Register == getMessage.Register).ToList();
 
-            switch (getMessage.Flags)
+            foreach (var response in pendingRegisterResponses)
             {
-                case GetSetResponseFlags.None:
-                    pendingResponse.TaskCompletionSource.SetResult(getMessage.RegisterValue);
-                    break;
-                case GetSetResponseFlags.UnknownId:
-                    pendingResponse.TaskCompletionSource.SetException(new UnknownIdException("Unknown Id"));
-                    break;
-                case GetSetResponseFlags.ParameterError: //Supposed to be only for setting value
-                case GetSetResponseFlags.NotSupported: //Supposed to be only for setting value
-                default:
-                    break;
+                try
+                {
+                    switch (getMessage.Flags)
+                    {
+                        case GetSetResponseFlags.None:
+                            response.TaskCompletionSource.SetResult(getMessage.RegisterValue);
+                            break;
+                        case GetSetResponseFlags.UnknownId:
+                            response.TaskCompletionSource.SetException(new UnknownIdException("Unknown Id"));
+                            break;
+                        case GetSetResponseFlags.ParameterError: //Supposed to be only for setting value
+                        case GetSetResponseFlags.NotSupported: //Supposed to be only for setting value
+                        default:
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Something went wrong while completing Task.");
+                }
             }
         }
 
@@ -209,7 +218,9 @@ namespace VeDirectCommunication
             }
             finally
             {
+                await _writeLock.WaitAsync();
                 _pendingGetResponses.Remove(pendingResponse);
+                _writeLock.Release();
             }
         }
 
@@ -246,7 +257,9 @@ namespace VeDirectCommunication
             }
             finally
             {
+                await _writeLock.WaitAsync();
                 _pendingPingResponses.Remove(pendingResponse);
+                _writeLock.Release();
             }
         }
 
