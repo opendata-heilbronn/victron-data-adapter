@@ -27,7 +27,7 @@ namespace VictronDataAdapter
         private InfluxDbClient _writer;
         private ConcurrentQueue<Point> _sendQueue;
         private DateTime _lastStatTime = DateTime.MinValue;
-        private readonly TimeSpan _statDebounceTime = TimeSpan.FromSeconds(1);
+        private readonly TimeSpan _statDebounceTime = TimeSpan.FromMilliseconds(500);
 
         private readonly IDictionary<VictronRegister, byte[]> _currentStats = new Dictionary<VictronRegister, byte[]>();
         private string _serialNumber = string.Empty;
