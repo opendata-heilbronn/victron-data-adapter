@@ -26,6 +26,8 @@ namespace VictronDataAdapter
         private readonly RegisterParser _registerParser;
         private InfluxDbClient _writer;
         private ConcurrentQueue<Point> _sendQueue;
+        private DateTime _lastStatTime = DateTime.MinValue;
+        private readonly TimeSpan _statDebounceTime = TimeSpan.FromSeconds(1);
 
         private readonly IDictionary<VictronRegister, byte[]> _currentStats = new Dictionary<VictronRegister, byte[]>();
         private string _serialNumber = string.Empty;
@@ -145,6 +147,10 @@ namespace VictronDataAdapter
 
         private void AddCurrentToQueue()
         {
+            if(DateTime.UtcNow - _statDebounceTime < _lastStatTime){
+                return;
+            }
+
             IDictionary<VictronRegister, byte[]> currentStats;
             lock (_currentStats)
             {
@@ -153,6 +159,7 @@ namespace VictronDataAdapter
             _logger.LogInformation("Added {StatCount} Stats to send queue", currentStats.Count);
             var point = _streamAdapter.GetNextDataPoint(currentStats);
             _sendQueue.Enqueue(point);
+            _lastStatTime = DateTime.UtcNow;
         }
 
         public async Task SendData()
