@@ -30,7 +30,6 @@ namespace VictronDataAdapter
         private readonly TimeSpan _statDebounceTime = TimeSpan.FromMilliseconds(500);
 
         private readonly IDictionary<VictronRegister, byte[]> _currentStats = new Dictionary<VictronRegister, byte[]>();
-        private string _serialNumber = string.Empty;
         private List<VictronRegister> _asyncRegisters;
         private readonly VictronRegister[] _statsRegisters = new VictronRegister[]
         {
@@ -136,7 +135,7 @@ namespace VictronDataAdapter
 
                     await Task.WhenAll(tasks);
                     AddCurrentToQueue();
-                    await Task.Delay(30 * 1000, _cts.Token); //every 10 seconds
+                    await Task.Delay(30 * 1000, _cts.Token);
                 }
                 catch (Exception ex)
                 {
