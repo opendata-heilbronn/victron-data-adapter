@@ -10,9 +10,9 @@ There is an abstraction for the communication with the device called `IVictronSt
 
 There is a sample implementation `NetworkVictronStream` for doing the VE.Direct communication over an [Ethernet to TTL Serial](https://www.pusr.com/products/serial-to-ethernet-converter-modules-usr-tcp232-t2.html) adapter (there are <20$ clones from eBay/AliExpress, be aware you'll usually also need a 5V/3.3V level converter).
 
-The protocol implementation on the Victron device is very robust, it worked fine even _with an Ethernet-To-Serial adapter through a VPN over a 4G mobile network_ (this (+ some TCP virtual serial port software) is also, how you can use the Victron software remotely).
+The protocol implementation on the Victron device is very robust, it worked fine even _with an Ethernet-To-Serial adapter through a VPN over a 4G mobile network_ (this (+ some TCP virtual serial port software) is also, how you can use the Victron software (and even do firmware upgrades) remotely).
 
-You could easily write an implementation of `IVictronStream` to use a directly hooked up serial port with `System.IO.Ports.SerialPort`, likely it would also be possible ot connect to the device via bluetooth.
+You could easily write an implementation of `IVictronStream` to use a directly hooked up serial port with `System.IO.Ports.SerialPort`, likely it would also be possible to connect to the device via bluetooth.
 
 ## Initialization, Basic Usage
 To read and write the data stream sent by the charge controller the `VeDirectDevice` needs a `IVictronStream`, like a `NetworkVictronStream`. The `NetworkVictronStream` takes an `IOptions<IpDataSourceConfig>` and an `ILogger<VeDirectDevice>` as arguments. Consult the Microsoft manual for `Microsoft.Extensions.Options` and `Microsoft.Extensions.Logging` if you don't know how to get those.
